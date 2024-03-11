@@ -47,26 +47,41 @@ def log(text):
     logging.info(text)
 
 def check_for_schedule():
-    print("Checking for existing schedule...", end=" ") 
-    if not os.path.exists(schedule_filepath):
-        print("No existing schedule found")
-        print("Attempting to retrieve schedule from URL...")
+    print("Attempting to pull schedule...")
+    schedule = pull_schedule(schedule_url)
+    if schedule != None:
+        print("Checking for existing schedule...", end=" ")
+        if os.path.exists(schedule_filepath):
+            print("Found!")
+            new = remove_empty_lines(schedule.text)
+            with open(schedule_filepath, "r") as f:
+                existing = f.read()
+            if schedules_match(new, existing):
+                log("Schedules are the same, discarding fetched schedule")
 
-        schedule = get_schedule_from_website(schedule_url)
-        if schedule.ok:
-            log(f"Schedule downloaded successfully from: { schedule_url }")
-            write_schedule_to_file(schedule.text, schedule_filepath)
+            else:
+                log("Fetched schedule is newer than existing. Updating existing schedule...")
+                write_schedule_to_file(new, schedule_filepath)
         else:
-            log(f"HTTP response error retrieving schedule: { schedule.response }")
+            print("None found")
+            write_schedule_to_file(schedule.text, schedule_filepath)
 
+def schedules_match(new, existing):
+    if new == existing:
+        return True
     else:
-        print("Schedule found!")
-
-def get_schedule_from_website(url):
+        return False
+    
+def pull_schedule(url):
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36'
     headers = {'User-Agent': user_agent}
     r = requests.get(url, headers=headers)
-    return r
+    if r.ok:
+        log(f"Schedule downloaded successfully from: { url }")
+        return r
+    else:
+        log(f"Error retrieving schedule: { r.response }")
+        return None
 
 def check_for_game(date):
     print("Checking if there is a game today...", end=" ")
@@ -78,7 +93,6 @@ def check_for_game(date):
                     line = line.replace("   ", "  ")
                 game_data = line.strip().split("  ")
                 game = HockeyGame(game_data[0], game_data[1], game_data[2],game_data[3], game_data[4])
-                # print(f"Game found: { game.print_game() }")
                 return game
         else:
             return None
@@ -88,16 +102,9 @@ def remove_empty_lines(text):
 
 def write_schedule_to_file(schedule, filepath):
     filename = "schedule.txt"
-    if not os.path.exists(filepath):
-        f = open(filename, "w")
-        log(f"File created to store schedule:  '{ filename }'")
-    else:
-        f = open(filename, "w")
-
     schedule_no_lines = remove_empty_lines(schedule)
-
-    f.write(schedule_no_lines)
-    f.close()
+    with open(filename, "w") as f:
+        f.write(schedule_no_lines)
     log(f"Schedule written to '{ filename }' successfully")
 
 def get_alert_time(gametime):
@@ -141,9 +148,8 @@ def daily_check():
         except Exception as e:
             log(f"Error sending alert: {e}")
     else:
-        print("No game today")
-
-    print("[***] Daily Check Complete [***]")
+        log("No game today")
+    log("Finished\n")
 
 schedule_url: str
 schedule_filepath: str
@@ -156,9 +162,22 @@ configure_logging(logging_filepath)
 today = date.today().strftime("%b %-d")
 
 schedule.every().day.at("08:00:00").do(daily_check)
-while True:
+# while True:
  
-    # Checks whether a scheduled task 
-    # is pending to run or not
-    schedule.run_pending()
-    time.sleep(60)
+#     # Checks whether a scheduled task 
+#     # is pending to run or not
+#     schedule.run_pending()
+#     time.sleep(60)
+
+daily_check()
+
+###TESTING BELOW###
+# new_schedule = pull_schedule(schedule_url)
+# new = remove_empty_lines(new_schedule.text)
+# with open(schedule_filepath, "r") as f:
+#     old = f.read()
+
+# if schedules_match(new, old):
+#     print("Schedules match")
+# else:
+#     print("Schedules don't match")
