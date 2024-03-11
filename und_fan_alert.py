@@ -21,7 +21,7 @@ def load_config(config_file):
         message_server = config[1]['messaging']['server']
         auth_token = config[1]['messaging']['token']
         logging_filepath = config[2]['logging']['filepath']
-    print("Configuration values loaded")
+    print("Configuration loaded")
 
 def generate_logfile(log_filepath):
     log_path = './log'
@@ -40,14 +40,23 @@ def generate_logfile(log_filepath):
 
 def configure_logging(log_filepath):
     generate_logfile(log_filepath)
-    logging.basicConfig(filename=log_filepath, filemode='a', format='%(asctime)s - %(message)s', level=logging.INFO)
+    logging.basicConfig(filename=log_filepath, filemode='a', format='%(asctime)s - %(message)s', level=logging.DEBUG)
 
-def log(text):
+def log(text, log_type='info'):
     print(text)
-    logging.info(text)
+    if log_type == 'info':
+        logging.info(text)
+    if log_type == 'error':
+        logging.error(text)
+
+def schedule_exists():
+    check_for_schedule()
+    if os.path.exists(schedule_filepath):
+        return True
+    else:
+        return False
 
 def check_for_schedule():
-    print("Attempting to pull schedule...")
     schedule = pull_schedule(schedule_url)
     if schedule != None:
         print("Checking for existing schedule...", end=" ")
@@ -73,6 +82,7 @@ def schedules_match(new, existing):
         return False
     
 def pull_schedule(url):
+    print("Attempting to pull schedule...")
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36'
     headers = {'User-Agent': user_agent}
     r = requests.get(url, headers=headers)
@@ -80,7 +90,7 @@ def pull_schedule(url):
         log(f"Schedule downloaded successfully from: { url }")
         return r
     else:
-        log(f"Error retrieving schedule: { r.response }")
+        log(f"[ERROR] Pulling schedule failed: { r.response }")
         return None
 
 def check_for_game(date):
@@ -135,20 +145,20 @@ def send_game_alert(game):
         log(f"Game alert sent immediately: { message_title } { message }")
 
 def daily_check():
-    global today
     log(" -- Starting daily check --")
-    check_for_schedule()
-    game = check_for_game(today)
-
-    if game != None:
-        print("game found!")
-        print(f"    UND vs { game.opponent} {game.time } @ { game.location }")
-        try:
-            send_game_alert(game)
-        except Exception as e:
-            log(f"Error sending alert: {e}")
+    if schedule_exists():
+        game = check_for_game(today)
+        if game != None:
+            print("game found!")
+            print(f"    UND vs { game.opponent} {game.time } @ { game.location }")
+            try:
+                send_game_alert(game)
+            except Exception as e:
+                log(f"[ERROR]: {e}", 'error')
+        else:
+            log("No game today")
     else:
-        log("No game today")
+        log("No schedule found/obtained - aborting")
     log("Finished\n")
 
 schedule_url: str
@@ -162,22 +172,9 @@ configure_logging(logging_filepath)
 today = date.today().strftime("%b %-d")
 
 schedule.every().day.at("08:00:00").do(daily_check)
-# while True:
+while True:
  
-#     # Checks whether a scheduled task 
-#     # is pending to run or not
-#     schedule.run_pending()
-#     time.sleep(60)
-
-daily_check()
-
-###TESTING BELOW###
-# new_schedule = pull_schedule(schedule_url)
-# new = remove_empty_lines(new_schedule.text)
-# with open(schedule_filepath, "r") as f:
-#     old = f.read()
-
-# if schedules_match(new, old):
-#     print("Schedules match")
-# else:
-#     print("Schedules don't match")
+    # Checks whether a scheduled task 
+    # is pending to run or not
+    schedule.run_pending()
+    time.sleep(60)
