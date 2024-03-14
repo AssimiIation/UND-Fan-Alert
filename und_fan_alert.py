@@ -1,3 +1,5 @@
+#v1.0.0
+
 from datetime import date
 import requests, logging, yaml, os, schedule, time
 
