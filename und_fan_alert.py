@@ -1,4 +1,4 @@
-#v1.0.1
+#v1.0.2
 
 from datetime import date
 import requests, logging, yaml, os, schedule, time
@@ -15,7 +15,7 @@ class HockeyGame:
         print(f"UND vs { self.opponent } { self.time } @ { self.location }, ")
 
 def load_config(config_file):
-    global schedule_url, schedule_filepath, message_server, auth_token, logging_filepath
+    global schedule_url, schedule_filepath, message_server, auth_token, logging_filepath, check_time
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
         schedule_url = config[0]['schedule']['url']
@@ -23,6 +23,7 @@ def load_config(config_file):
         message_server = config[1]['messaging']['server']
         auth_token = config[1]['messaging']['token']
         logging_filepath = config[2]['logging']['filepath']
+        check_time = config[3]["task"]["time"]
     print("Configuration loaded")
 
 def generate_logfile(log_filepath):
@@ -168,12 +169,15 @@ schedule_filepath: str
 message_server: str
 auth_token: str
 logging_filepath: str
+check_time: str
 
 load_config("config.yml")
 configure_logging(logging_filepath)
 today = date.today().strftime("%b %-d")
 
-schedule.every().day.at("08:00:00").do(daily_check)
+log(f"Initialization complete. Method daily_task() task scheduled to trigger daily at { check_time }")
+
+schedule.every().day.at(check_time).do(daily_check)
 while True:
  
     # Checks whether a scheduled task 

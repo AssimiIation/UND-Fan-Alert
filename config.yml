@@ -6,3 +6,5 @@
     token: tk_6a1yegh2fyp3fr415us7c72haufjb
 - logging:
     filepath: "./log/und_fan_alert.log"
+- task:
+    time: "08:00:00"        #Time the program will run each day
