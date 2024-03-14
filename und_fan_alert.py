@@ -1,4 +1,4 @@
-#v1.0.0
+#v1.0.1
 
 from datetime import date
 import requests, logging, yaml, os, schedule, time
@@ -169,7 +169,7 @@ message_server: str
 auth_token: str
 logging_filepath: str
 
-load_config("./config.yml")
+load_config("config.yml")
 configure_logging(logging_filepath)
 today = date.today().strftime("%b %-d")
 
