@@ -1,7 +1,8 @@
-#v1.0.2
+#v1.0.3
 
 from datetime import date
-import requests, logging, yaml, os, schedule, time
+from pathlib import Path
+import requests, logging, yaml, os
 
 class HockeyGame:
     def __init__(self, date, time, at, opponent, location, ):
@@ -19,15 +20,12 @@ def load_config(config_file):
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
         schedule_url = config[0]['schedule']['url']
-        schedule_filepath = config[0]['schedule']['filepath']
         message_server = config[1]['messaging']['server']
         auth_token = config[1]['messaging']['token']
-        logging_filepath = config[2]['logging']['filepath']
-        check_time = config[3]["task"]["time"]
     print("Configuration loaded")
 
 def generate_logfile(log_filepath):
-    log_path = './log'
+    log_path = root_dir / "log"
     try:
         os.mkdir(log_path)
         print(f"Log folder created")
@@ -164,23 +162,16 @@ def daily_check():
         log("No schedule found/obtained - aborting")
     log("Finished\n")
 
+root_dir = Path(__file__).resolve().parent
+schedule_filepath = root_dir / "schedule.txt"
+logging_filepath = root_dir / "log/und-fan-alert.log"
+
 schedule_url: str
-schedule_filepath: str
 message_server: str
 auth_token: str
-logging_filepath: str
-check_time: str
 
-load_config("config.yml")
+load_config(root_dir / "config.yml")
 configure_logging(logging_filepath)
 today = date.today().strftime("%b %-d")
 
-log(f"Initialization complete. Method daily_task() task scheduled to trigger daily at { check_time }")
-
-schedule.every().day.at(check_time).do(daily_check)
-while True:
- 
-    # Checks whether a scheduled task 
-    # is pending to run or not
-    schedule.run_pending()
-    time.sleep(60)
+daily_check()
